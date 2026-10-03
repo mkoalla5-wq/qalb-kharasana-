@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <rect width="120" height="120" rx="24" fill="#EDE6DE"/>
+  <!-- QALB AL architectural motif in royal blue -->
+  <g fill="#0057D9" transform="translate(16, 22)">
+    <!-- Top Row: Q B mini monogram -->
+    <path d="M 4,0 L 26,0 C 32,0 36,4 36,10 L 36,36 C 36,42 32,46 26,46 L 20,46 L 26,52 L 34,52 L 34,46 L 38,46 L 38,55 L 18,55 L 14,46 L 4,46 C 0,46 0,42 0,36 L 0,10 C 0,4 4,0 4,0 Z" />
+    <rect x="11" y="11" width="14" height="24" rx="2" fill="#EDE6DE" />
+    <rect x="17" y="0" width="2" height="46" fill="#EDE6DE" />
+
+    <g transform="translate(48, 0)">
+      <path d="M 0,0 L 30,0 C 36,0 40,4 40,11 C 40,15 37,19 33,21 C 38,23 41,28 41,35 C 41,41 37,46 30,46 L 0,46 Z" />
+      <rect x="12" y="9" width="16" height="10" rx="2" fill="#EDE6DE" />
+      <rect x="12" y="27" width="16" height="11" rx="2" fill="#EDE6DE" />
+      <rect x="19" y="0" width="2" height="46" fill="#EDE6DE" />
+    </g>
+
+    <!-- Bottom label -->
+    <text x="0" y="70" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="20" font-weight="800" letter-spacing="-0.5" fill="#0057D9">AL Kharasana</text>
+  </g>
+</svg>

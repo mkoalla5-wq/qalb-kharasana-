@@ -1,0 +1,168 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // STRICT Super Admin: Only the designated owner email or pre-verified admin record
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'mkoalla5@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isNotBanned() {
+      return !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned != true;
+    }
+
+    function isValidStore(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+             data.slug is string && data.slug.size() >= 2 && data.slug.size() <= 100 &&
+             data.vendorId is string && data.vendorId.size() <= 128 &&
+             data.status in ['active', 'suspended', 'pending'];
+    }
+
+    function isValidProduct(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.storeId is string && data.storeId.size() <= 128 &&
+             data.vendorId is string && data.vendorId.size() <= 128 &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.basePriceSAR is number && data.basePriceSAR >= 0 &&
+             data.stock is number && data.stock >= 0;
+    }
+
+    // Admins Collection: strictly writeable by Super Admin
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isAdmin() || (
+        isSignedIn() && request.auth.uid == userId &&
+        !incoming().diff(existing()).affectedKeys().hasAny(['isBanned'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Stores Collection
+    match /stores/{storeId} {
+      allow read: if true;
+      allow create: if isValidId(storeId) && (
+        isAdmin() ||
+        (isSignedIn() && isNotBanned() && isValidStore(incoming()) && incoming().vendorId == request.auth.uid)
+      );
+      allow update: if isValidId(storeId) && (
+        isAdmin() ||
+        (isSignedIn() && isNotBanned() && isValidStore(incoming()) && existing().vendorId == request.auth.uid)
+      );
+      allow delete: if isValidId(storeId) && (
+        isAdmin() ||
+        (isSignedIn() && existing().vendorId == request.auth.uid)
+      );
+
+      // Real-time Chat sub-collection for each store
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // Products Collection
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isValidId(productId) && (
+        isAdmin() ||
+        (isSignedIn() && isNotBanned() && isValidProduct(incoming()) && incoming().vendorId == request.auth.uid)
+      );
+      allow update: if isValidId(productId) && (
+        isAdmin() ||
+        (isSignedIn() && isNotBanned() && isValidProduct(incoming()) && existing().vendorId == request.auth.uid)
+      );
+      allow delete: if isValidId(productId) && (
+        isAdmin() ||
+        (isSignedIn() && existing().vendorId == request.auth.uid)
+      );
+    }
+
+    // Orders Collection: Targeted to specific store
+    match /orders/{orderId} {
+      allow read: if isValidId(orderId) && (
+        isAdmin() ||
+        (isSignedIn() && (resource.data.vendorId == request.auth.uid || resource.data.customerEmail == request.auth.token.email))
+      );
+      allow list: if isSignedIn();
+      allow create: if isValidId(orderId) && isSignedIn();
+      allow update: if isValidId(orderId) && (
+        isAdmin() ||
+        (isSignedIn() && (resource.data.vendorId == request.auth.uid || incoming().diff(existing()).affectedKeys().hasOnly(['status', 'notes', 'updatedAt'])))
+      );
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    // Targeted Notifications Collection
+    match /notifications/{notificationId} {
+      allow read, list: if isSignedIn() && (
+        resource.data.recipientId == request.auth.uid ||
+        (resource.data.recipientRole == 'superadmin' && isAdmin())
+      );
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        resource.data.recipientId == request.auth.uid ||
+        (resource.data.recipientRole == 'superadmin' && isAdmin())
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Callback Requests
+    match /callbackRequests/{requestId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Custom Requests Collection
+    match /customRequests/{requestId} {
+      allow read, list: if isSignedIn();
+      allow create: if isValidId(requestId) && isSignedIn();
+      allow update: if isValidId(requestId) && (
+        isAdmin() ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+      );
+      allow delete: if isValidId(requestId) && isAdmin();
+    }
+
+    // Global Marketplace Branding & Settings: Only Super Admin can write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

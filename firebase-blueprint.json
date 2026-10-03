@@ -1,0 +1,244 @@
+{
+  "entities": {
+    "Store": {
+      "title": "Store",
+      "description": "Artisanal concrete vendor store profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "slug": { "type": "string", "maxLength": 100 },
+        "vendorId": { "type": "string", "maxLength": 128 },
+        "vendorEmail": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "city": { "type": "string", "maxLength": 100 },
+        "country": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["active", "suspended", "pending"] },
+        "logoUrl": { "type": "string", "maxLength": 500 },
+        "bannerUrl": { "type": "string", "maxLength": 500 },
+        "artisanPoints": { "type": "number" },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "slug", "vendorId", "vendorEmail", "status"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Concrete home art and decor item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "storeId": { "type": "string", "maxLength": 128 },
+        "vendorId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 120 },
+        "titleAr": { "type": "string", "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 1500 },
+        "descriptionAr": { "type": "string", "maxLength": 1500 },
+        "category": { "type": "string", "maxLength": 50 },
+        "basePriceSAR": { "type": "number" },
+        "stock": { "type": "number" },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "dimensions": { "type": "string", "maxLength": 100 },
+        "weightKg": { "type": "number" },
+        "finish": { "type": "string", "maxLength": 80 },
+        "isFeatured": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "storeId", "vendorId", "title", "basePriceSAR", "category", "stock"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Cash on Delivery customer order targeted to a specific store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "storeId": { "type": "string", "maxLength": 128 },
+        "vendorId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 120 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "customerEmail": { "type": "string", "maxLength": 120 },
+        "country": { "type": "string", "maxLength": 50 },
+        "city": { "type": "string", "maxLength": 100 },
+        "address": { "type": "string", "maxLength": 300 },
+        "paymentMethod": { "type": "string", "maxLength": 20 },
+        "currency": { "type": "string", "maxLength": 10 },
+        "totalAmount": { "type": "number" },
+        "items": { "type": "array" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "confirmed", "dispatched", "delivered", "cancelled"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "storeId", "customerName", "customerPhone", "city", "address", "paymentMethod", "currency", "totalAmount", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Targeted order or event notification for artisan or superadmin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "recipientId": { "type": "string", "maxLength": 128 },
+        "recipientRole": { "type": "string", "enum": ["artisan", "superadmin"] },
+        "storeId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "message": { "type": "string", "maxLength": 500 },
+        "type": { "type": "string", "enum": ["new_order", "callback_request", "system"] },
+        "orderId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["unread", "accepted", "read"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "recipientId", "recipientRole", "title", "message", "type", "status"]
+    },
+    "StoreMessage": {
+      "title": "StoreMessage",
+      "description": "Real-time communication message between customer and artisan atelier",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "storeId": { "type": "string", "maxLength": 128 },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128 },
+        "senderName": { "type": "string", "maxLength": 100 },
+        "senderRole": { "type": "string", "enum": ["customer", "artisan"] },
+        "text": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "storeId", "senderId", "senderName", "senderRole", "text"]
+    },
+    "CallbackRequest": {
+      "title": "CallbackRequest",
+      "description": "Customer callback inquiry request to a specific store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "storeId": { "type": "string", "maxLength": 128 },
+        "storeName": { "type": "string", "maxLength": 100 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "preferredTime": { "type": "string", "maxLength": 100 },
+        "inquiry": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["pending", "called", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "storeId", "customerName", "customerPhone", "status"]
+    },
+    "CustomRequest": {
+      "title": "CustomRequest",
+      "description": "Bespoke architectural concrete and decor commission request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 120 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "customerEmail": { "type": "string", "maxLength": 120 },
+        "country": { "type": "string", "maxLength": 50 },
+        "city": { "type": "string", "maxLength": 100 },
+        "concreteColor": { "type": "string", "maxLength": 60 },
+        "aggregateType": { "type": "string", "maxLength": 60 },
+        "engravingText": { "type": "string", "maxLength": 200 },
+        "dimensions": { "type": "string", "maxLength": 100 },
+        "indoorOutdoor": { "type": "string", "maxLength": 30 },
+        "budget": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["new", "in_review", "quoted", "in_production", "completed"] },
+        "targetStoreId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "customerName", "customerPhone", "city", "concreteColor", "status"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role and artisan points details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["superadmin", "admin", "vendor", "customer"] },
+        "storeId": { "type": "string", "maxLength": 128 },
+        "storeSlug": { "type": "string", "maxLength": 100 },
+        "artisanPoints": { "type": "number" },
+        "isBanned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Super admin credential marker",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "MarketplaceSettings": {
+      "title": "MarketplaceSettings",
+      "description": "Dynamic customization settings for the marketplace (name, banner, logo, branding)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "appName": { "type": "string", "maxLength": 120 },
+        "appNameAr": { "type": "string", "maxLength": 120 },
+        "appTagline": { "type": "string", "maxLength": 200 },
+        "appTaglineAr": { "type": "string", "maxLength": 200 },
+        "logoUrl": { "type": "string", "maxLength": 500 },
+        "bannerUrl": { "type": "string", "maxLength": 500 },
+        "heroTitle": { "type": "string", "maxLength": 150 },
+        "heroTitleAr": { "type": "string", "maxLength": 150 },
+        "heroSubtitle": { "type": "string", "maxLength": 500 },
+        "heroSubtitleAr": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "appName"]
+    }
+  },
+  "firestore": {
+    "/stores/{storeId}": {
+      "schema": "Store",
+      "description": "Artisanal concrete vendor store details"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Concrete products listed in the marketplace"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders routed to target store"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Targeted notifications for specific artisan and superadmin"
+    },
+    "/stores/{storeId}/messages/{messageId}": {
+      "schema": "StoreMessage",
+      "description": "Real-time communication messages for a specific store"
+    },
+    "/callbackRequests/{requestId}": {
+      "schema": "CallbackRequest",
+      "description": "Customer request-a-callback inquiries"
+    },
+    "/customRequests/{requestId}": {
+      "schema": "CustomRequest",
+      "description": "Custom bespoke concrete commission requests"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User account profiles, roles, and artisan points"
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminRecord",
+      "description": "Privileged superadmin records"
+    },
+    "/settings/{settingId}": {
+      "schema": "MarketplaceSettings",
+      "description": "Marketplace global branding and customization settings"
+    }
+  }
+}
