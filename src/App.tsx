@@ -15,6 +15,7 @@ import { ProductDetailModal } from './components/ProductDetailModal';
 import { CheckoutModal } from './components/CheckoutModal';
 import { CustomConcreteRequestModal } from './components/CustomConcreteRequestModal';
 import { VendorRegistrationModal } from './components/VendorRegistrationModal';
+import { PublishProductModal } from './components/PublishProductModal';
 import { CartDrawer } from './components/CartDrawer';
 import { Footer } from './components/Footer';
 import { AIChatHelper } from './components/AIChatHelper';
@@ -47,6 +48,7 @@ function MainApp() {
   const [customRequestTargetStoreId, setCustomRequestTargetStoreId] = useState<string | undefined>(undefined);
   const [isVendorSignupOpen, setIsVendorSignupOpen] = useState(false);
   const [isSuperAdminOpen, setIsSuperAdminOpen] = useState(false);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
 
   // Load real data from Firestore
   const loadMarketplaceData = async () => {
@@ -120,8 +122,13 @@ function MainApp() {
     setIsCheckoutOpen(true);
   };
 
+  const handleProductPublished = (newProd: Product) => {
+    // Immediately display new product in global feed
+    setProducts(prev => [newProd, ...prev.filter(p => p.id !== newProd.id)]);
+    loadMarketplaceData();
+  };
+
   // 1. STRICT LOGIN WALL ENFORCEMENT
-  // Restrict all content and navigation. No user can view any page without being logged in.
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#F7F5F0] flex flex-col items-center justify-center font-sans text-stone-900">
@@ -138,7 +145,6 @@ function MainApp() {
   }
 
   // 2. DEDICATED STOREFRONT MICROSITE ROUTE (/stores/[storeName])
-  // This page MUST NOT include global navigation or links to other stores, creating an independent microsite experience.
   if (currentView === 'store' && activeStore) {
     return (
       <div className="min-h-screen bg-[#F7F5F0] text-stone-900 flex flex-col font-sans selection:bg-stone-900 selection:text-white">
@@ -157,6 +163,7 @@ function MainApp() {
               setCustomRequestTargetStoreId(storeId);
               setIsCustomRequestOpen(true);
             }}
+            onOpenPublishModal={() => setIsPublishModalOpen(true)}
           />
         </main>
 
@@ -193,6 +200,13 @@ function MainApp() {
           presetStoreId={customRequestTargetStoreId}
         />
 
+        {/* Put Item for Sale Modal */}
+        <PublishProductModal
+          isOpen={isPublishModalOpen}
+          onClose={() => setIsPublishModalOpen(false)}
+          onProductPublished={handleProductPublished}
+        />
+
         {/* AI Support Chat Concierge */}
         <AIChatHelper />
       </div>
@@ -217,6 +231,7 @@ function MainApp() {
           setCustomRequestTargetStoreId(undefined);
           setIsCustomRequestOpen(true);
         }}
+        onOpenPublishModal={() => setIsPublishModalOpen(true)}
         onNavigateHome={() => {
           setCurrentView('home');
           try {
@@ -262,6 +277,7 @@ function MainApp() {
                 setIsCustomRequestOpen(true);
               }}
               onOpenVendorSignup={() => setIsVendorSignupOpen(true)}
+              onOpenPublishModal={() => setIsPublishModalOpen(true)}
               onRefresh={loadMarketplaceData}
             />
           </>
@@ -279,6 +295,7 @@ function MainApp() {
           <VendorDashboard
             onViewLiveStore={slug => handleOpenStorePage(slug)}
             onOpenVendorSignup={() => setIsVendorSignupOpen(true)}
+            onOpenPublishModal={() => setIsPublishModalOpen(true)}
           />
         )}
       </main>
@@ -344,6 +361,13 @@ function MainApp() {
         isOpen={isCustomRequestOpen}
         onClose={() => setIsCustomRequestOpen(false)}
         presetStoreId={customRequestTargetStoreId}
+      />
+
+      {/* Put Item for Sale Modal */}
+      <PublishProductModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        onProductPublished={handleProductPublished}
       />
 
       {/* Atelier Upgrade / Launch Modal */}

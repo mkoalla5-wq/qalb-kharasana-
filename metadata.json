@@ -2,5 +2,7 @@
   "name": "Qalb Al-Kharasana - Concrete Art Marketplace",
   "description": "Premier multi-vendor concrete home art & decor marketplace across the Arab world. Artisanal terrazzo, trays, mabkhara incense burners, and bespoke architectural concrete.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

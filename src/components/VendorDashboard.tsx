@@ -74,7 +74,8 @@ const CONCRETE_IMAGE_PRESETS = [
 export const VendorDashboard: React.FC<{
   onViewLiveStore: (slug: string) => void;
   onOpenVendorSignup?: () => void;
-}> = ({ onViewLiveStore, onOpenVendorSignup }) => {
+  onOpenPublishModal?: () => void;
+}> = ({ onViewLiveStore, onOpenVendorSignup, onOpenPublishModal }) => {
   const { userStore, currentUser, refreshUserStore } = useAuth();
   const { formatPrice, language } = useMarketplace();
   const isRTL = language === 'ar';
@@ -433,11 +434,11 @@ export const VendorDashboard: React.FC<{
                 Atelier Concrete Pieces
               </h2>
               <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer shadow-sm"
+                onClick={onOpenPublishModal || (() => setIsAddModalOpen(true))}
+                className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-black rounded-xl transition flex items-center gap-2 cursor-pointer shadow-sm hover:scale-102"
               >
-                <Plus className="w-4 h-4" />
-                <span>Add Handcrafted Piece</span>
+                <Plus className="w-4 h-4 text-amber-400" />
+                <span>+ Put Item for Sale</span>
               </button>
             </div>
 
@@ -451,10 +452,10 @@ export const VendorDashboard: React.FC<{
                   List your first hand-cast concrete tray, mabkhara, or sculptural vessel to earn +15 Artisan Points.
                 </p>
                 <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="px-4 py-2 bg-stone-900 text-white text-xs font-bold rounded-xl cursor-pointer"
+                  onClick={onOpenPublishModal || (() => setIsAddModalOpen(true))}
+                  className="px-5 py-2.5 bg-stone-900 text-white text-xs font-black rounded-xl cursor-pointer shadow-md hover:bg-stone-800"
                 >
-                  + Add First Piece
+                  + Put Item for Sale
                 </button>
               </div>
             ) : (

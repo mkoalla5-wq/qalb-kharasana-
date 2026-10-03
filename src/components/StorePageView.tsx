@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Store, Product } from '../types';
 import { useMarketplace } from '../context/MarketplaceContext';
+import { useAuth } from '../context/AuthContext';
 import { ProductCard } from './ProductCard';
 import { getProductsByStore } from '../services/storeService';
 import { StoreChatModal } from './StoreChatModal';
@@ -18,6 +19,7 @@ import {
   Award,
   Check,
   ShoppingBag,
+  PlusCircle,
 } from 'lucide-react';
 
 export const StorePageView: React.FC<{
@@ -25,10 +27,14 @@ export const StorePageView: React.FC<{
   onBackToGlobalMarket?: () => void;
   onSelectProduct: (product: Product) => void;
   onOpenCustomRequestWithStore: (storeId: string) => void;
-}> = ({ store, onBackToGlobalMarket, onSelectProduct, onOpenCustomRequestWithStore }) => {
+  onOpenPublishModal?: () => void;
+}> = ({ store, onBackToGlobalMarket, onSelectProduct, onOpenCustomRequestWithStore, onOpenPublishModal }) => {
   const { language, t, setIsCartOpen } = useMarketplace();
+  const { currentUser } = useAuth();
   const [storeProducts, setStoreProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const isOwner = currentUser?.id === store.vendorId || currentUser?.storeId === store.id;
 
   // Communication Modals
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -117,6 +123,16 @@ export const StorePageView: React.FC<{
               <span className="hidden sm:inline">Request Callback</span>
             </button>
 
+            {isOwner && onOpenPublishModal && (
+              <button
+                onClick={onOpenPublishModal}
+                className="px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+                <span>+ Put for Sale</span>
+              </button>
+            )}
+
             <button
               onClick={() => setIsCartOpen(true)}
               className="p-2 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
@@ -181,11 +197,21 @@ export const StorePageView: React.FC<{
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2.5 flex-wrap">
+                {isOwner && onOpenPublishModal && (
+                  <button
+                    onClick={onOpenPublishModal}
+                    className="px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-102"
+                  >
+                    <PlusCircle className="w-4 h-4 text-amber-400" />
+                    <span>+ Put Item for Sale</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => onOpenCustomRequestWithStore(store.id)}
-                  className="px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-extrabold transition flex items-center gap-2 cursor-pointer shadow-md"
+                  className="px-4 py-2.5 bg-white border-2 border-stone-300 hover:border-stone-400 text-stone-900 rounded-xl text-xs font-extrabold transition flex items-center gap-2 cursor-pointer shadow-xs"
                 >
-                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <Sparkles className="w-4 h-4 text-amber-600" />
                   <span>Bespoke Commission</span>
                 </button>
 
@@ -260,9 +286,17 @@ export const StorePageView: React.FC<{
               {displayStoreName} is currently curing and diamond-finishing a new batch of cast concrete homeware.
             </p>
             <div className="flex justify-center gap-3 pt-2">
+              {isOwner && onOpenPublishModal && (
+                <button
+                  onClick={onOpenPublishModal}
+                  className="px-5 py-2.5 bg-stone-900 text-white rounded-xl text-xs font-black hover:bg-stone-800 transition shadow-sm cursor-pointer"
+                >
+                  + Put Item for Sale
+                </button>
+              )}
               <button
                 onClick={() => setIsChatOpen(true)}
-                className="px-4 py-2 bg-stone-900 text-white rounded-xl text-xs font-bold hover:bg-stone-800 transition"
+                className="px-4 py-2.5 bg-white border border-stone-300 text-stone-900 rounded-xl text-xs font-bold hover:bg-stone-100 transition shadow-2xs cursor-pointer"
               >
                 Inquire Directly
               </button>

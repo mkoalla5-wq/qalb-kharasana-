@@ -21,8 +21,9 @@ export const CatalogView: React.FC<{
   onViewStore: (storeId: string) => void;
   onCustomCommission: () => void;
   onOpenVendorSignup: () => void;
+  onOpenPublishModal?: () => void;
   onRefresh: () => void;
-}> = ({ products, onSelectProduct, onViewStore, onCustomCommission, onOpenVendorSignup, onRefresh }) => {
+}> = ({ products, onSelectProduct, onViewStore, onCustomCommission, onOpenVendorSignup, onOpenPublishModal, onRefresh }) => {
   const {
     selectedCategory,
     setSelectedCategory,
@@ -70,14 +71,27 @@ export const CatalogView: React.FC<{
           ))}
         </div>
 
-        <button
-          onClick={onRefresh}
-          className="text-xs font-bold text-stone-600 hover:text-stone-900 flex items-center gap-1.5 self-end sm:self-auto cursor-pointer"
-          title="Refresh products"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>{isRTL ? 'تحديث' : 'Refresh'}</span>
-        </button>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          {onOpenPublishModal && (
+            <button
+              onClick={onOpenPublishModal}
+              className="px-3.5 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-xs hover:scale-102"
+              title="Put concrete item for sale"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isRTL ? 'عرض قطعة للبيع' : '+ Put for Sale'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={onRefresh}
+            className="text-xs font-bold text-stone-600 hover:text-stone-900 flex items-center gap-1.5 cursor-pointer px-2 py-1"
+            title="Refresh products"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>{isRTL ? 'تحديث' : 'Refresh'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Result Counter & Info */}
@@ -129,11 +143,11 @@ export const CatalogView: React.FC<{
             </button>
 
             <button
-              onClick={onOpenVendorSignup}
+              onClick={onOpenPublishModal || onOpenVendorSignup}
               className="px-5 py-2.5 bg-white hover:bg-stone-100 text-stone-900 border border-stone-300 font-bold text-xs rounded-xl transition flex items-center gap-2 cursor-pointer shadow-2xs"
             >
               <PlusCircle className="w-3.5 h-3.5 text-blue-600" />
-              <span>{isRTL ? 'انضم كمشغل وأضف أول قطعة' : 'List First Piece as Artisan'}</span>
+              <span>{isRTL ? 'عرض قطعة للبيع الآن' : '+ Put Item for Sale'}</span>
             </button>
           </div>
         </div>

@@ -23,6 +23,7 @@ export const Navbar: React.FC<{
   onOpenVendorSignup: () => void;
   onOpenSuperAdmin: () => void;
   onOpenCustomRequest: () => void;
+  onOpenPublishModal: () => void;
   onNavigateHome: () => void;
   onNavigateStores: () => void;
   onNavigateVendorDashboard: () => void;
@@ -32,6 +33,7 @@ export const Navbar: React.FC<{
   onOpenVendorSignup,
   onOpenSuperAdmin,
   onOpenCustomRequest,
+  onOpenPublishModal,
   onNavigateHome,
   onNavigateStores,
   onNavigateVendorDashboard,
@@ -172,6 +174,16 @@ export const Navbar: React.FC<{
                 <span className="hidden sm:inline">Super Admin</span>
               </button>
             )}
+
+            {/* Put Item for Sale Button */}
+            <button
+              onClick={onOpenPublishModal}
+              className="px-3 py-1.5 sm:py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-102"
+              title="Put concrete item for sale"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isRTL ? 'عرض قطعة للبيع' : 'Put for Sale'}</span>
+            </button>
 
             {/* Currency Selector (SAR / AED / EGP) */}
             <div className="relative group">

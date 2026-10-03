@@ -13,7 +13,7 @@ import {
   serverTimestamp,
   increment,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase/config';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase/config';
 import {
   Store,
   Product,
@@ -218,16 +218,18 @@ export async function getProductsByStore(storeId: string): Promise<Product[]> {
 export async function createProduct(product: Omit<Product, 'createdAt' | 'updatedAt'>): Promise<Product> {
   const path = `${PRODUCTS_COLLECTION}/${product.id}`;
   try {
+    const vendorUid = auth.currentUser?.uid || product.vendorId;
     const newProduct: Product = {
       ...product,
+      vendorId: vendorUid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
     await setDoc(doc(db, PRODUCTS_COLLECTION, product.id), newProduct);
 
     // Reward artisan with +15 engagement points for listing a handcrafted item!
-    if (product.vendorId && product.storeId) {
-      addArtisanPoints(product.vendorId, product.storeId, 15);
+    if (vendorUid && product.storeId) {
+      addArtisanPoints(vendorUid, product.storeId, 15);
     }
 
     return newProduct;
