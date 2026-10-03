@@ -1,87 +1,181 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Sparkles, Send, X, Minimize2, MessageSquare, ShieldCheck, ChevronRight } from 'lucide-react';
+import { useMarketplace } from '../context/MarketplaceContext';
+import { useAuth } from '../context/AuthContext';
+import {
+  Sparkles,
+  Send,
+  X,
+  Bot,
+  RotateCcw,
+  AlertCircle,
+  HelpCircle,
+  Flame,
+  Droplets,
+  Truck,
+  Palette,
+} from 'lucide-react';
 
 interface ChatMessage {
   id: string;
   sender: 'ai' | 'user';
   text: string;
   timestamp: string;
+  isError?: boolean;
 }
 
-const KNOWLEDGE_RESPONSES: Record<string, string> = {
-  mabkhara: 'Our artisanal concrete incense burners (Mabkhara) are cast with heat-resistant refractory concrete and cured with mineral silicates. For safety, use natural bamboo charcoal discs with an insulated brass ash dish inside the vessel. Clean with a dry microfiber brush; avoid acidic cleansers.',
-  care: 'Concrete Homeware Care Guidelines:\n1. Wipe spills (coffee, perfume, wax) immediately with a damp cloth.\n2. Do NOT use acidic chemicals, vinegar, or abrasive steel wool.\n3. All pieces feature food-safe water-repellent siloxane sealing.\n4. Apply beeswax balm once every 6 months to maintain a rich, tactile satin patina.',
-  shipping: 'We provide expedited white-glove Cash on Delivery (COD) across the GCC and Egypt:\n• Saudi Arabia (Riyadh, Jeddah, Dammam): 2-4 business days.\n• UAE (Dubai, Abu Dhabi): 2-3 business days.\n• Egypt (Cairo, Giza, Alexandria): 3-5 business days.\nEach heavy concrete piece is packed in custom impact-absorbing foam packaging.',
-  custom: 'Looking for a bespoke commission? You can use the "Custom Commission" feature in the navigation to request custom mineral pigments (Desert Sand, Alabaster White, Charcoal Basalt, Terracotta, Olive Green), inlaid brass Arabic calligraphy, or bespoke table dimensions directly from our ateliers!',
-  terrazzo: 'Our terrazzo pieces are crafted by hand-seeding natural marble, alabaster, and volcanic basalt aggregate chips into the wet cementitious matrix, followed by diamond-pad grinding and honing to reveal the organic stone geometry.',
-};
-
 export const AIChatHelper: React.FC = () => {
+  const { language } = useMarketplace();
+  const { currentUser, userStore } = useAuth();
+  const isRTL = language === 'ar';
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'ai',
-      text: 'Salam! I am the Qalb Al-Kharasana AI Art Concierge. How may I assist you with brutalist concrete homeware, bespoke commissions, care instructions, or shipping across KSA, UAE, and Egypt?',
+      text: isRTL
+        ? 'أهلاً بك في قلب الخرسانة! أنا المساعد الذكي المدعوم بنموذج Google Gemini (3.8 Flash). كيف يمكنني مساعدتك في القطع الفنية الخرسانية، المباخر المعمارية المقاومة للحرارة، صواني التيرازو، أو العناية بالخرسانة والطلبات المخصصة؟'
+        : 'Salam! I am your architectural art concierge powered by Google Gemini (3.8 Flash). Ask me anything about our brutalist concrete pieces, heat-resistant mabkharas, terrazzo casting, care instructions, or bespoke commissions across KSA, UAE, and Egypt!',
       timestamp: 'Just now',
     },
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isTyping]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim() || isTyping) return;
+  const handleSend = async (customPrompt?: string) => {
+    const textToSend = (customPrompt || inputText).trim();
+    if (!textToSend || isTyping) return;
 
-    const userText = inputText.trim();
     const userMsg: ChatMessage = {
       id: `usr_${Date.now()}`,
       sender: 'user',
-      text: userText,
+      text: textToSend,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsTyping(true);
+    setErrorMessage(null);
 
-    // Simulate smart AI concierge reasoning
-    setTimeout(() => {
-      const lower = userText.toLowerCase();
-      let reply = '';
+    try {
+      // Build conversation history for multi-turn Gemini reasoning
+      const historyPayload = messages
+        .filter(m => !m.isError)
+        .slice(-6)
+        .map(m => ({
+          sender: m.sender,
+          text: m.text,
+        }));
 
-      if (lower.includes('mabkhara') || lower.includes('incense') || lower.includes('burn') || lower.includes('heat') || lower.includes('بخور') || lower.includes('مبخرة')) {
-        reply = KNOWLEDGE_RESPONSES.mabkhara;
-      } else if (lower.includes('clean') || lower.includes('care') || lower.includes('wash') || lower.includes('stain') || lower.includes('seal') || lower.includes('عناية')) {
-        reply = KNOWLEDGE_RESPONSES.care;
-      } else if (lower.includes('ship') || lower.includes('cod') || lower.includes('deliver') || lower.includes('riyadh') || lower.includes('dubai') || lower.includes('cairo') || lower.includes('توصيل') || lower.includes('شحن')) {
-        reply = KNOWLEDGE_RESPONSES.shipping;
-      } else if (lower.includes('custom') || lower.includes('bespoke') || lower.includes('engrav') || lower.includes('commission') || lower.includes('طلب خاص')) {
-        reply = KNOWLEDGE_RESPONSES.custom;
-      } else if (lower.includes('terrazzo') || lower.includes('marble') || lower.includes('aggregate') || lower.includes('تيرازو')) {
-        reply = KNOWLEDGE_RESPONSES.terrazzo;
-      } else {
-        reply = `Thank you for your inquiry about "${userText}". All our concrete home art pieces are cast by independent verified artisans across the Arab world with mineral pigments and industrial sealants. If you require a tailored solution or price quotation, you can also click "Request Callback" on any artisan's storefront page!`;
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: textToSend,
+          history: historyPayload,
+          context: {
+            language,
+            userRole: currentUser?.role || 'visitor',
+            userStore: userStore?.name || null,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Server responded with status ${response.status}`);
       }
+
+      const data = await response.json();
+      const aiReply = data.reply || 'I processed your inquiry but received an empty response. Please ask again.';
 
       setMessages(prev => [
         ...prev,
         {
           id: `ai_${Date.now()}`,
           sender: 'ai',
-          text: reply,
+          text: aiReply,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
+    } catch (err: any) {
+      console.error('Gemini chat request failed:', err);
+      const errMsg = err?.message || 'Connection error. Please try again.';
+      setErrorMessage(errMsg);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `err_${Date.now()}`,
+          sender: 'ai',
+          text: isRTL
+            ? `عذراً، حدث خطأ أثناء الاتصال بمحرك Gemini: ${errMsg}`
+            : `I encountered an issue connecting to Gemini: ${errMsg}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isError: true,
+        },
+      ]);
+    } finally {
       setIsTyping(false);
-    }, 650);
+    }
+  };
+
+  const handleResetChat = () => {
+    setMessages([
+      {
+        id: 'welcome_reset',
+        sender: 'ai',
+        text: isRTL
+          ? 'تم بدء محادثة جديدة مع Gemini 3.8 Flash! ما الذي تود معرفته عن قطع الخرسانة المعمارية اليوم؟'
+          : 'Conversation cleared! How can Gemini assist you with our architectural concrete collection today?',
+        timestamp: 'Just now',
+      },
+    ]);
+    setErrorMessage(null);
+  };
+
+  // Helper to format markdown-like text from Gemini (bolding, lists)
+  const formatAiText = (text: string) => {
+    const lines = text.split('\n');
+    return lines.map((line, idx) => {
+      // Bullet points
+      if (line.trim().startsWith('•') || line.trim().startsWith('*') || line.trim().startsWith('-')) {
+        const content = line.trim().replace(/^[\*\•\-]\s*/, '');
+        return (
+          <li key={idx} className="ml-3 list-disc my-0.5">
+            {renderBoldText(content)}
+          </li>
+        );
+      }
+      if (line.trim() === '') {
+        return <div key={idx} className="h-1.5" />;
+      }
+      return (
+        <p key={idx} className="my-0.5">
+          {renderBoldText(line)}
+        </p>
+      );
+    });
+  };
+
+  const renderBoldText = (str: string) => {
+    const parts = str.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} className="font-extrabold text-stone-900">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
   };
 
   return (
@@ -90,65 +184,95 @@ export const AIChatHelper: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        aria-label="Open AI Concierge"
-        className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 bg-stone-900 hover:bg-stone-800 text-stone-100 p-3.5 rounded-2xl shadow-2xl border-2 border-stone-300 flex items-center gap-2 group transition-all duration-300 hover:scale-105 cursor-pointer"
+        aria-label="Open Gemini AI Concierge"
+        className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 bg-stone-900 hover:bg-stone-800 text-stone-100 p-3 sm:px-4 sm:py-3 rounded-2xl shadow-2xl border-2 border-stone-300 flex items-center gap-2.5 group transition-all duration-300 hover:scale-105 cursor-pointer"
       >
-        <div className="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+        <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-xs">
           <Sparkles className="w-3.5 h-3.5 animate-pulse" />
         </div>
-        <span className="text-xs font-bold font-sans hidden sm:inline text-stone-100">
-          Chat with AI
-        </span>
+        <div className="text-left hidden sm:block">
+          <div className="text-xs font-black tracking-tight text-white flex items-center gap-1">
+            <span>Gemini AI</span>
+            <span className="text-[9px] bg-blue-500/30 text-blue-200 border border-blue-400/40 px-1 py-0.2 rounded font-mono">
+              3.8 Flash
+            </span>
+          </div>
+          <div className="text-[10px] text-stone-400 font-medium">
+            {isRTL ? 'اسأل الذكاء الاصطناعي' : 'Ask Architecture Concierge'}
+          </div>
+        </div>
       </button>
 
       {/* Floating Chat Modal */}
       {isOpen && (
-        <div className="fixed bottom-20 sm:bottom-22 right-4 sm:right-6 z-50 w-full max-w-sm sm:max-w-md h-[520px] bg-[#FAF8F5] border-2 border-stone-300 rounded-3xl shadow-2xl flex flex-col overflow-hidden font-sans backdrop-blur-md animate-in fade-in slide-in-from-bottom-6">
+        <div className="fixed bottom-20 sm:bottom-22 right-4 sm:right-6 z-50 w-full max-w-[360px] sm:max-w-[420px] h-[550px] bg-[#FAF8F5] border-2 border-stone-300 rounded-3xl shadow-2xl flex flex-col overflow-hidden font-sans backdrop-blur-md animate-in fade-in slide-in-from-bottom-6">
           {/* Header */}
-          <div className="p-4 bg-[#EDE8E1] border-b border-stone-300 flex items-center justify-between">
+          <div className="p-3.5 sm:p-4 bg-[#EDE8E1] border-b border-stone-300 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                <Bot className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-500 text-white flex items-center justify-center shadow-xs">
+                <Sparkles className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h4 className="font-extrabold text-sm text-stone-900">AI Concierge</h4>
-                  <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.2 rounded-full border border-blue-200">
-                    Pryzm AI
+                  <h4 className="font-black text-sm text-stone-900 font-['Plus_Jakarta_Sans',sans-serif]">
+                    Gemini AI Concierge
+                  </h4>
+                  <span className="text-[10px] bg-blue-100 text-blue-900 font-extrabold px-1.5 py-0.5 rounded-full border border-blue-200">
+                    3.8 Flash
                   </span>
                 </div>
-                <p className="text-[10px] text-stone-500 font-medium">
-                  Concrete Architecture & Artisan Knowledge
+                <p className="text-[10px] text-stone-600 font-medium flex items-center gap-1">
+                  <span>Reads & answers live with Google GenAI</span>
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1.5 text-stone-400 hover:text-stone-800 rounded-xl transition cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleResetChat}
+                className="p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-200 rounded-xl transition cursor-pointer"
+                title="Reset conversation"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1.5 text-stone-400 hover:text-stone-800 hover:bg-stone-200 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Quick Questions Pills */}
-          <div className="px-3 py-2 bg-stone-200/50 border-b border-stone-200 flex items-center gap-1.5 overflow-x-auto text-[10px] font-semibold text-stone-600 no-scrollbar">
+          {/* Quick Prompts Carousel */}
+          <div className="px-3 py-2 bg-stone-200/60 border-b border-stone-300 flex items-center gap-1.5 overflow-x-auto text-[10px] font-semibold text-stone-700 no-scrollbar">
             <button
-              onClick={() => setInputText('How do I care for concrete trays and vessels?')}
-              className="whitespace-nowrap px-2.5 py-1 bg-white border border-stone-300 rounded-lg hover:border-stone-500 cursor-pointer transition"
+              onClick={() => handleSend(isRTL ? 'كيف أعتني بصواني ومباخر الخرسانة المعمارية؟' : 'How do I care for and seal concrete trays and mabkharas?')}
+              className="whitespace-nowrap px-2.5 py-1 bg-white border border-stone-300 rounded-lg hover:border-stone-600 cursor-pointer transition flex items-center gap-1 shadow-2xs"
             >
-              Care & Cleaning
+              <Droplets className="w-3 h-3 text-blue-600" />
+              <span>{isRTL ? 'العناية والتنظيف' : 'Care & Sealants'}</span>
             </button>
             <button
-              onClick={() => setInputText('How does Cash on Delivery work in KSA and UAE?')}
-              className="whitespace-nowrap px-2.5 py-1 bg-white border border-stone-300 rounded-lg hover:border-stone-500 cursor-pointer transition"
+              onClick={() => handleSend(isRTL ? 'ما هي مواصفات مباخر الخرسانة المقاومة للحرارة؟' : 'What makes your concrete mabkhara heat-resistant?')}
+              className="whitespace-nowrap px-2.5 py-1 bg-white border border-stone-300 rounded-lg hover:border-stone-600 cursor-pointer transition flex items-center gap-1 shadow-2xs"
             >
-              Shipping & COD
+              <Flame className="w-3 h-3 text-amber-600" />
+              <span>{isRTL ? 'المباخر والحرارة' : 'Mabkhara Heat'}</span>
             </button>
             <button
-              onClick={() => setInputText('Can I order a custom terrazzo color blend?')}
-              className="whitespace-nowrap px-2.5 py-1 bg-white border border-stone-300 rounded-lg hover:border-stone-500 cursor-pointer transition"
+              onClick={() => handleSend(isRTL ? 'كيف يعمل الدفع عند الاستلام والشحن في السعودية والإمارات ومصر؟' : 'How does Cash on Delivery work in KSA, UAE, and Egypt?')}
+              className="whitespace-nowrap px-2.5 py-1 bg-white border border-stone-300 rounded-lg hover:border-stone-600 cursor-pointer transition flex items-center gap-1 shadow-2xs"
             >
-              Bespoke Colors
+              <Truck className="w-3 h-3 text-emerald-600" />
+              <span>{isRTL ? 'الشحن والدفع' : 'Shipping & COD'}</span>
+            </button>
+            <button
+              onClick={() => handleSend(isRTL ? 'كيف يمكنني طلب خلطة ألوان تيرازو مخصصة أو نقش خط عربي؟' : 'Can I order a custom terrazzo color mix or engraved Arabic calligraphy?')}
+              className="whitespace-nowrap px-2.5 py-1 bg-white border border-stone-300 rounded-lg hover:border-stone-600 cursor-pointer transition flex items-center gap-1 shadow-2xs"
+            >
+              <Palette className="w-3 h-3 text-purple-600" />
+              <span>{isRTL ? 'طلب مخصص' : 'Bespoke Orders'}</span>
             </button>
           </div>
 
@@ -160,42 +284,82 @@ export const AIChatHelper: React.FC = () => {
                 className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-xs whitespace-pre-line ${
+                  className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-xs whitespace-pre-line ${
                     msg.sender === 'user'
                       ? 'bg-stone-900 text-white rounded-br-xs'
-                      : 'bg-white text-stone-900 border border-stone-200 rounded-bl-xs'
+                      : msg.isError
+                      ? 'bg-red-50 text-red-900 border border-red-200 rounded-bl-xs'
+                      : 'bg-white text-stone-800 border border-stone-200 rounded-bl-xs'
                   }`}
                 >
-                  {msg.text}
+                  {msg.sender === 'ai' ? (
+                    <div className="space-y-1">
+                      {formatAiText(msg.text)}
+                    </div>
+                  ) : (
+                    msg.text
+                  )}
                 </div>
-                <span className="text-[9px] text-stone-400 mt-1 px-1">
-                  {msg.timestamp}
-                </span>
+                <div className="flex items-center gap-1 mt-1 px-1 text-[9px] text-stone-400 font-mono">
+                  {msg.sender === 'ai' && (
+                    <span className="text-blue-600 font-bold">Gemini •</span>
+                  )}
+                  <span>{msg.timestamp}</span>
+                </div>
               </div>
             ))}
+
             {isTyping && (
-              <div className="flex items-center gap-1.5 p-3 bg-white border border-stone-200 rounded-2xl text-xs text-stone-400 w-24">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce delay-100"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce delay-200"></span>
+              <div className="flex items-center gap-2 p-3 bg-white border border-stone-200 rounded-2xl text-xs text-stone-600 w-fit shadow-xs">
+                <div className="w-4 h-4 rounded-full bg-blue-600/10 flex items-center justify-center">
+                  <Sparkles className="w-2.5 h-2.5 text-blue-600 animate-spin" />
+                </div>
+                <span className="text-[11px] font-bold text-stone-500">
+                  {isRTL ? 'Gemini يقرأ ويجيب الآن...' : 'Gemini is reading & answering...'}
+                </span>
+                <span className="flex gap-1 ml-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce delay-100"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce delay-200"></span>
+                </span>
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
+          {/* Error Banner if any */}
+          {errorMessage && (
+            <div className="px-3 py-1.5 bg-red-100/80 border-t border-red-200 text-red-800 text-[10px] flex items-center justify-between">
+              <span className="truncate">{errorMessage}</span>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="text-red-900 font-bold ml-2 underline cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           {/* Input Box */}
-          <form onSubmit={handleSend} className="p-3 bg-[#EDE8E1] border-t border-stone-300 flex items-center gap-2">
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              handleSend();
+            }}
+            className="p-3 bg-[#EDE8E1] border-t border-stone-300 flex items-center gap-2"
+          >
             <input
               type="text"
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              placeholder="Ask anything about concrete art..."
-              className="flex-1 bg-white border border-stone-300 rounded-xl px-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-800"
+              placeholder={isRTL ? 'اسأل Gemini عن أي قطعة خرسانية...' : 'Ask Gemini anything about concrete art...'}
+              className="flex-1 bg-white border border-stone-300 rounded-xl px-3.5 py-2.5 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
             />
             <button
               type="submit"
               disabled={!inputText.trim() || isTyping}
-              className="p-2 bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white rounded-xl transition cursor-pointer shadow-xs"
+              className="p-2.5 bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white rounded-xl transition cursor-pointer shadow-sm flex-shrink-0"
+              title="Send message"
             >
               <Send className="w-4 h-4" />
             </button>
