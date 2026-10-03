@@ -38,7 +38,7 @@
         "category": { "type": "string", "maxLength": 50 },
         "basePriceSAR": { "type": "number" },
         "stock": { "type": "number" },
-        "imageUrl": { "type": "string", "maxLength": 500 },
+        "imageUrl": { "type": "string", "maxLength": 300000 },
         "dimensions": { "type": "string", "maxLength": 100 },
         "weightKg": { "type": "number" },
         "finish": { "type": "string", "maxLength": 80 },

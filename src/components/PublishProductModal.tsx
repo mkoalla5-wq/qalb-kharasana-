@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useMarketplace } from '../context/MarketplaceContext';
 import { Product, ProductCategory, Store } from '../types';
 import { createProduct, createStore } from '../services/storeService';
+import { compressImageFile } from '../utils/imageUtils';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import {
@@ -19,6 +20,10 @@ import {
   ArrowRight,
   Store as StoreIcon,
   Tag,
+  UploadCloud,
+  Camera,
+  Trash2,
+  RefreshCw,
 } from 'lucide-react';
 
 const CONCRETE_IMAGE_PRESETS = [
@@ -74,7 +79,11 @@ export const PublishProductModal: React.FC<{
   const [weightKg, setWeightKg] = useState<number>(1.6);
   const [finish, setFinish] = useState('Matte Siloxane Water-Repellent Sealer');
   const [imageUrl, setImageUrl] = useState(CONCRETE_IMAGE_PRESETS[0].url);
-  const [customImageInput, setCustomImageInput] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadedFileSizeInfo, setUploadedFileSizeInfo] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fallback for user without store yet
   const [quickAtelierName, setQuickAtelierName] = useState(
@@ -93,12 +102,49 @@ export const PublishProductModal: React.FC<{
   const handleSelectPreset = (preset: typeof CONCRETE_IMAGE_PRESETS[0]) => {
     setImageUrl(preset.url);
     setCategory(preset.category);
+    setUploadedFileName(null);
+    setUploadedFileSizeInfo(null);
+    setImageUploadError(null);
   };
 
-  const handleApplyCustomImage = () => {
-    if (customImageInput.trim()) {
-      setImageUrl(customImageInput.trim());
-      setCustomImageInput('');
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setImageUploadError('Please select a valid image file (JPEG, PNG, WebP).');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setImageUploadError(null);
+
+    const origSizeKB = Math.round(file.size / 1024);
+    const origSizeStr = origSizeKB > 1024 ? `${(origSizeKB / 1024).toFixed(1)} MB` : `${origSizeKB} KB`;
+
+    try {
+      // Process and compress image cleanly to Base64 Data URL (~60-90KB)
+      const base64DataUri = await compressImageFile(file, 900, 0.82);
+      setImageUrl(base64DataUri);
+      setUploadedFileName(file.name);
+
+      const approxCompKB = Math.round((base64DataUri.length * 3) / 4 / 1024);
+      setUploadedFileSizeInfo(`${origSizeStr} → ${approxCompKB} KB (Optimized)`);
+    } catch (err: any) {
+      console.error('Image compression failed:', err);
+      setImageUploadError('Failed to process image. Please try a different photo.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleClearImage = () => {
+    setImageUrl(CONCRETE_IMAGE_PRESETS[0].url);
+    setUploadedFileName(null);
+    setUploadedFileSizeInfo(null);
+    setImageUploadError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -471,55 +517,132 @@ export const PublishProductModal: React.FC<{
                 </div>
               </div>
 
-              {/* Image Selection & Preview */}
-              <div className="space-y-2 pt-1 border-t border-stone-200">
-                <label className="block font-bold text-stone-700">
-                  Select Concrete Artwork Photo:
-                </label>
-
-                {/* Preset Options */}
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {CONCRETE_IMAGE_PRESETS.map((preset, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => handleSelectPreset(preset)}
-                      className={`cursor-pointer rounded-xl overflow-hidden border-2 h-16 transition relative group ${
-                        imageUrl === preset.url
-                          ? 'border-stone-900 ring-2 ring-stone-900 scale-102'
-                          : 'border-stone-300 opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img
-                        src={preset.url}
-                        alt={preset.name}
-                        className="w-full h-full object-cover"
-                      />
-                      {imageUrl === preset.url && (
-                        <div className="absolute top-1 right-1 bg-stone-900 text-white rounded-full p-0.5 shadow-sm">
-                          <Check className="w-2.5 h-2.5" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+              {/* Direct Device Image File Upload */}
+              <div className="space-y-3 pt-2 border-t border-stone-200">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-stone-800 text-xs">
+                    Product Image (Direct Device Upload) *
+                  </label>
+                  {uploadedFileName && (
+                    <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      Image Ready & Optimized
+                    </span>
+                  )}
                 </div>
 
-                {/* Or Custom URL */}
-                <div className="flex gap-2 pt-1">
-                  <input
-                    type="url"
-                    value={customImageInput}
-                    onChange={e => setCustomImageInput(e.target.value)}
-                    placeholder="Or paste custom image URL (https://...)"
-                    className="flex-1 bg-white border border-stone-300 rounded-xl px-3 py-1.5 text-xs text-stone-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyCustomImage}
-                    disabled={!customImageInput.trim()}
-                    className="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold rounded-xl disabled:opacity-40 cursor-pointer"
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="publish-product-image-file"
+                />
+
+                {/* Upload Zone / Active Preview */}
+                {uploadedFileName ? (
+                  <div className="p-3 bg-white border-2 border-stone-300 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-stone-200 bg-stone-100 flex-shrink-0">
+                        <img
+                          src={imageUrl}
+                          alt="Uploaded piece preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-extrabold text-xs text-stone-900 truncate">
+                          {uploadedFileName}
+                        </div>
+                        <div className="text-[10px] text-stone-500 font-mono mt-0.5">
+                          {uploadedFileSizeInfo || 'Processed & ready'}
+                        </div>
+                        <span className="text-[10px] text-emerald-700 font-bold">
+                          ✓ Stored cleanly as Base64 Data URL
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold rounded-xl transition cursor-pointer"
+                      >
+                        Change Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClearImage}
+                        className="p-1.5 text-stone-400 hover:text-red-600 rounded-xl transition cursor-pointer"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-4 sm:p-5 bg-white border-2 border-dashed border-stone-300 hover:border-stone-800 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer transition group shadow-2xs"
                   >
-                    Apply URL
-                  </button>
+                    <div className="w-10 h-10 rounded-xl bg-stone-100 group-hover:bg-stone-900 group-hover:text-white text-stone-700 flex items-center justify-center mb-2 transition">
+                      {isUploadingImage ? (
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <UploadCloud className="w-5 h-5" />
+                      )}
+                    </div>
+
+                    <div className="text-xs font-extrabold text-stone-900">
+                      {isUploadingImage
+                        ? 'Optimizing and compressing image...'
+                        : 'Click or tap to upload photo from your device'}
+                    </div>
+                    <p className="text-[11px] text-stone-500 mt-0.5">
+                      Select any photo from your phone or computer (JPEG, PNG, WebP). It is automatically scaled & optimized.
+                    </p>
+                  </div>
+                )}
+
+                {imageUploadError && (
+                  <div className="text-[11px] text-red-600 font-bold">
+                    {imageUploadError}
+                  </div>
+                )}
+
+                {/* Preset Options as one-click alternatives */}
+                <div className="pt-2">
+                  <span className="block text-[11px] font-bold text-stone-500 mb-1.5">
+                    Or select from curated concrete atelier presets:
+                  </span>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {CONCRETE_IMAGE_PRESETS.map((preset, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleSelectPreset(preset)}
+                        className={`cursor-pointer rounded-xl overflow-hidden border-2 h-14 transition relative group ${
+                          imageUrl === preset.url && !uploadedFileName
+                            ? 'border-stone-900 ring-2 ring-stone-900 scale-102'
+                            : 'border-stone-300 opacity-60 hover:opacity-100'
+                        }`}
+                        title={preset.name}
+                      >
+                        <img
+                          src={preset.url}
+                          alt={preset.name}
+                          className="w-full h-full object-cover"
+                        />
+                        {imageUrl === preset.url && !uploadedFileName && (
+                          <div className="absolute top-1 right-1 bg-stone-900 text-white rounded-full p-0.5 shadow-sm">
+                            <Check className="w-2.5 h-2.5" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

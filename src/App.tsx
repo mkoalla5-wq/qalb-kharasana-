@@ -293,6 +293,7 @@ function MainApp() {
 
         {currentView === 'vendor_dashboard' && (
           <VendorDashboard
+            key={`vd-${products.length}`}
             onViewLiveStore={slug => handleOpenStorePage(slug)}
             onOpenVendorSignup={() => setIsVendorSignupOpen(true)}
             onOpenPublishModal={() => setIsPublishModalOpen(true)}
